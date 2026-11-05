@@ -30,6 +30,7 @@ model User {
   createdAt    DateTime @default(now())
 
   stats UserStats?
+  matchPlayers MatchPlayer[]
 }
 
 model UserStats {
@@ -42,4 +43,50 @@ model UserStats {
   user             User     @relation(fields: [userId], references: [id])
 
   @@index([wins(sort: Desc)])
+}
+
+model Match {
+  id          String      @id @default(uuid())
+  roomCode    String
+  status      MatchStatus @default(IN_PROGRESS)
+  targetScore Int
+  startedAt   DateTime    @default(now())
+  endedAt     DateTime?
+  winnerId    String?
+
+  players MatchPlayer[]
+  events  MatchEvent[]
+
+  @@index([status, endedAt])
+}
+
+model MatchPlayer {
+  id         String   @id @default(uuid())
+  matchId    String
+  userId     String
+  finalScore Int      @default(0)
+  placement  Int?
+  isWinner   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  match Match @relation(fields: [matchId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([matchId, userId])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model MatchEvent {
+  id         Int      @id @default(autoincrement())
+  matchId    String
+  turnNumber Int
+  userId     String
+  action     String
+  roll       Int?
+  turnTotal  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@index([matchId, id])
 }
