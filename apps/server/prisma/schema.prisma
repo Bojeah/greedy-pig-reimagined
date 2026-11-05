@@ -31,6 +31,7 @@ model User {
 
   stats UserStats?
   matchPlayers MatchPlayer[]
+    achievements UserAchievement[]
 }
 
 model UserStats {
@@ -89,4 +90,14 @@ model MatchEvent {
   match Match @relation(fields: [matchId], references: [id])
 
   @@index([matchId, id])
+}
+
+model UserAchievement {
+  userId     String
+  key        String
+  unlockedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@id([userId, key])
 }
