@@ -1,0 +1,32 @@
+@base = http://localhost:4000
+
+### Guest
+# @name guest
+POST {{base}}/api/auth/guest
+
+@token = {{guest.response.body.token}}
+
+### Create a room
+# @name room
+POST {{base}}/api/rooms
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "targetScore": 50, "maxPlayers": 2, "turnSeconds": 30 }
+
+@code = {{room.response.body.code}}
+
+### Look the room up
+GET {{base}}/api/rooms/{{code}}
+Authorization: Bearer {{token}}
+
+### Bad settings (must give 400)
+POST {{base}}/api/rooms
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "targetScore": 10 }
+
+### Unknown room (must give 404)
+GET {{base}}/api/rooms/ZZZZZ
+Authorization: Bearer {{token}}
