@@ -2,6 +2,21 @@ import { prisma } from '../../db/prisma.js';
 
 // Called when the host starts the game. Returns the new match id.
 export async function createMatch(room) {
+  await Promise.all(
+    room.players.map((player) =>
+      prisma.user.upsert({
+        where: { id: player.userId },
+        update: { username: player.username, isGuest: player.isGuest },
+        create: {
+          id: player.userId,
+          username: player.username,
+          isGuest: player.isGuest,
+          passwordHash: null,
+        },
+      }),
+    ),
+  );
+
   const match = await prisma.match.create({
     data: {
       roomCode: room.code,

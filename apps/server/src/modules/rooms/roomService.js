@@ -72,24 +72,6 @@ export function joinRoom(room, user, socketId) {
   touch(room);
 }
 
-export async function leaveRoom(room, userId) {
-  const player = room.players.find((p) => p.userId === userId);
-  if (!player) return;
-  if (room.status === 'PLAYING') {
-    await forfeitPlayer(room, userId);
-    return;
-  }
-  clearTimeout(player.disconnectTimer);
-  room.players = room.players.filter((p) => p.userId !== userId);
-  if (room.players.length === 0) {
-    removeRoom(room.code);
-    return;
-  }
-  if (room.hostId === userId) room.hostId = room.players[0].userId;
-  touch(room);
-  broadcastState(room);
-}
-
 export function startGame(room, userId) {
   return enqueue(room, async () => {
     if (room.hostId !== userId) {
