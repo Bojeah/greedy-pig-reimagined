@@ -1,0 +1,51 @@
+@base = http://localhost:4000
+@token = {{login.response.body.token}}
+
+
+### Health
+GET {{base}}/api/health
+
+### Register
+# @name register
+POST {{base}}/api/auth/register
+Content-Type: application/json
+
+{ "username": "ada", "password": "password123" }
+
+### Login
+# @name login
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{ "username": "ada", "password": "password123" }
+
+
+### Guest
+POST {{base}}/api/auth/guest
+
+### Me (send Login first)
+GET {{base}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### Profile
+GET {{base}}/api/profile
+Authorization: Bearer {{token}}
+
+### Stats
+GET {{base}}/api/stats
+Authorization: Bearer {{token}}
+
+### Leaderboard
+GET {{base}}/api/leaderboard?limit=20
+Authorization: Bearer {{token}}
+
+### Match history
+GET {{base}}/api/matches?limit=10
+Authorization: Bearer {{token}}
+
+### Create a room
+POST {{base}}/api/rooms
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "targetScore": 50, "maxPlayers": 2, "turnSeconds": 30 }
