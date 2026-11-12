@@ -14,7 +14,7 @@ const [password, setPassword] = useState('');
 const [error, setError] = useState('');
 const [busy, setBusy] = useState(false);
 // Once logged in (or playing as a guest), go back to the page the player
-wanted.
+//wanted.
 useEffect(() => {
 if (user) navigate(from, { replace: true });
 }, [user, from, navigate]);
