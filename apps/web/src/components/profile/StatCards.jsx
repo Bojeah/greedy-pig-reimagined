@@ -1,4 +1,4 @@
--function Card({ label, value }) {
+function Card({ label, value }) {
 return (
 <div className="rounded-lg border border-[#ffffff40] bg-[#ffffff10] p-3
 text-center">
