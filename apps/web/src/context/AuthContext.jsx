@@ -8,7 +8,7 @@ export function AuthProvider({ children }) {
 const [user, setUser] = useState(null);
 const [loading, setLoading] = useState(() => Boolean(getToken()));
 // On page load: if we have a saved token, ask the server who it belongs
-to.
+//to.
 useEffect(() => {
 if (!getToken()) return undefined;
 let cancelled = false;
@@ -28,7 +28,7 @@ cancelled = true;
 };
 }, []);
 // api.js announces a rejected token, so we can log the player out
-everywhere.
+//everywhere.
 useEffect(() => {
 const onUnauthorized = () => setUser(null);
 window.addEventListener('gp:unauthorized', onUnauthorized);

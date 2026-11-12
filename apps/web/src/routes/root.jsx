@@ -38,6 +38,8 @@ import dice5 from "src/assets/dice_5.png";
 import dice6 from "src/assets/dice_6.png";
 import { useState } from "react";
 import { getPigPetNames } from "src/utils/getPigPetNames";
+import { AuthProvider } from "src/context/AuthContext";
+import SlowServerBanner from "src/components/ui/SlowServerBanner";
 
 const preloadSrcList = [
   pig0,
@@ -99,11 +101,14 @@ function Root() {
       <main className="bg-[#111111] min-h-screen min-w-full relative z-10 sec-font ">
         <div className=" rounded-full bg-[#056FA4] blur-[500px] md:blur-[845px] w-[800px] h-[800px] -z-10 fixed -bottom-[700px] -left-[700px] md:-bottom-96 md:-left-96"></div>
         <div className=" rounded-full bg-[#D30CBD] blur-[500px] md:blur-[845px] w-[800px] h-[800px] -z-10 fixed -top-[700px] -right-[700px] md:-top-96 md:-right-96"></div>
-        <GreedyPigContext.Provider
-          value={{ preloadSrcList, setHasSound, hasSound, pigPetNames }}
-        >
-          <Outlet />
-        </GreedyPigContext.Provider>
+        <SlowServerBanner />
+<GreedyPigContext.Provider
+value={{ preloadSrcList, setHasSound, hasSound, pigPetNames }}
+>
+<AuthProvider>
+<Outlet />
+</AuthProvider>
+</GreedyPigContext.Provider>
       </main>
     </>
   );
