@@ -1,4 +1,6 @@
 @base = http://localhost:4000
+@token = {{login.response.body.token}}
+
 
 ### Health
 GET {{base}}/api/health
@@ -17,7 +19,6 @@ Content-Type: application/json
 
 { "username": "ada", "password": "password123" }
 
-@token = {{login.response.body.token}}
 
 ### Guest
 POST {{base}}/api/auth/guest
@@ -36,6 +37,7 @@ Authorization: Bearer {{token}}
 
 ### Leaderboard
 GET {{base}}/api/leaderboard?limit=20
+Authorization: Bearer {{token}}
 
 ### Match history
 GET {{base}}/api/matches?limit=10
