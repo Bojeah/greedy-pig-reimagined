@@ -35,7 +35,7 @@ this.code = code;
 }
 // ---- "the server is waking up" message ----
 // The free server sleeps when nobody uses it. If a request takes longer than
-4 seconds
+//4 seconds
 // we tell the whole app, and the SlowServerBanner shows a friendly message.
 let slowRequests = 0;
 function changeSlow(delta) {
@@ -64,8 +64,7 @@ headers,
 body: body !== undefined ? JSON.stringify(body) : undefined,
 });
 } catch {
-throw new ApiError(0, 'NETWORK_ERROR', 'Cannot reach the server. Check
-your connection and try again.');
+throw new ApiError(0, 'NETWORK_ERROR', 'Cannot reach the server. Check your connection and try again.');
 } finally {
 clearTimeout(slowTimer);
 if (slowFired) changeSlow(-1);
