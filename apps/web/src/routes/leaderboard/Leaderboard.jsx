@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import PageShell from 'src/components/ui/PageShell';
 import StateMessage from 'src/components/ui/StateMessage';
-import LeaderboardTable from 'src/components/leaderboard/LeaderboardTable';
+import LeaderboardTable from 'src/components/leaderboard/LeaderBoardTable';
 import useAuth from 'src/hooks/useAuth';
 import { apiFetch } from 'src/services/api';
 import { queryKeys } from 'src/services/queryKeys';
