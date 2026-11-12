@@ -43,7 +43,7 @@ model UserStats {
   updatedAt        DateTime @updatedAt
   user             User     @relation(fields: [userId], references: [id])
 
-  @@index([wins(sort: Desc)])
+    @@index([wins(sort: Desc), gamesPlayed(sort: Asc)])
 }
 
 model Match {
