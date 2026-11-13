@@ -1,17 +1,32 @@
-import { bank, createGame, currentPlayerId, GameError, placements, removePlayer, roll } from '../game/engine.js';
-import { allRooms, getRoom, removeRoom, touch } from './roomStore.js';
-import { publicState } from './publicState.js';
+import {
+  bank,
+  createGame,
+  currentPlayerId,
+  GameError,
+  placements,
+  roll,
+} from "../game/engine.js";
+import { allRooms, getRoom, removeRoom, touch } from "./roomStore.js";
+import { publicState } from "./publicState.js";
 
+const GRACE_MS = 60 * 1000; // how long a disconnected player keeps their seat
+export const REACTIONS = ["🐷", "😂", "🔥", "👏", "😮", "😭"];
 let io = null;
 let matchService = null;
-let rollFn;
+let rollFn; // undefined means the engine uses its secure default die
 
+// Called once by the socket server. Passing things in (instead of importing them here)
+// is what lets the tests run without a real database.
 export function configure(deps) {
   io = deps.io;
   matchService = deps.matchService;
   rollFn = deps.rollFn;
 }
 
+// ---------- helpers ----------
+
+// Runs one action at a time per room. Two near-simultaneous clicks wait in line,
+// so they can never corrupt the game state. The caller gets this task's own result or error.
 function enqueue(room, task) {
   const run = room.queue.then(task);
   room.queue = run.catch(() => {});
@@ -19,12 +34,16 @@ function enqueue(room, task) {
 }
 
 export function broadcastState(room) {
-  io.to(room.code).emit('room:state', publicState(room));
+  io.to(room.code).emit("room:state", publicState(room));
 }
 
 function emitEvents(room, events) {
   for (const e of events) {
-    io.to(room.code).emit('game:event', { type: e.type, playerId: e.playerId, value: e.value });
+    io.to(room.code).emit("game:event", {
+      type: e.type,
+      playerId: e.playerId,
+      value: e.value,
+    });
   }
 }
 
@@ -34,15 +53,18 @@ function recordEvents(room, turnNumber, events) {
       turnNumber,
       userId: e.playerId,
       action: e.type,
-      roll: e.type === 'ROLL' || e.type === 'BUST' ? e.value : null,
+      roll: e.type === "ROLL" || e.type === "BUST" ? e.value : null,
       turnTotal: e.turnTotal,
     });
   }
 }
 
+// ---------- lobby ----------
+
 export function joinRoom(room, user, socketId) {
   const existing = room.players.find((p) => p.userId === user.id);
   if (existing) {
+    // The same player is coming back (page refresh or a dropped connection).
     existing.socketId = socketId;
     existing.connected = true;
     clearTimeout(existing.disconnectTimer);
@@ -50,11 +72,14 @@ export function joinRoom(room, user, socketId) {
     touch(room);
     return;
   }
-  if (room.status !== 'LOBBY') {
-    throw new GameError('GAME_ALREADY_STARTED', 'That game has already started.');
+  if (room.status !== "LOBBY") {
+    throw new GameError(
+      "GAME_ALREADY_STARTED",
+      "That game has already started.",
+    );
   }
   if (room.players.length >= room.settings.maxPlayers) {
-    throw new GameError('ROOM_FULL', 'That room is full.');
+    throw new GameError("ROOM_FULL", "That room is full.");
   }
   const used = new Set(room.players.map((p) => p.pigIndex));
   let pigIndex = 0;
@@ -72,24 +97,58 @@ export function joinRoom(room, user, socketId) {
   touch(room);
 }
 
+export async function leaveRoom(room, userId) {
+  const player = room.players.find((p) => p.userId === userId);
+  if (!player) return;
+
+  if (room.status === "PLAYING") {
+    await forfeitPlayer(room, userId);
+    return;
+  }
+
+  clearTimeout(player.disconnectTimer);
+  room.players = room.players.filter((p) => p.userId !== userId);
+  if (room.players.length === 0) {
+    removeRoom(room.code);
+    return;
+  }
+  if (room.hostId === userId) room.hostId = room.players[0].userId;
+  touch(room);
+  broadcastState(room);
+}
+
+// ---------- starting and playing ----------
+
 export function startGame(room, userId) {
   return enqueue(room, async () => {
     if (room.hostId !== userId) {
-      throw new GameError('FORBIDDEN', 'Only the host can start the game.');
+      throw new GameError("FORBIDDEN", "Only the host can start the game.");
     }
-    if (room.status !== 'LOBBY') {
-      throw new GameError('GAME_ALREADY_STARTED', 'The game has already started.');
+    if (room.status !== "LOBBY") {
+      throw new GameError(
+        "GAME_ALREADY_STARTED",
+        "The game has already started.",
+      );
     }
     if (room.players.length < 2) {
-      throw new GameError('FORBIDDEN', 'You need at least 2 players to start.');
+      throw new GameError("FORBIDDEN", "You need at least 2 players to start.");
     }
-    const game = createGame(room.players.map((p) => p.userId), room.settings.targetScore);
+
+    const game = createGame(
+      room.players.map((p) => p.userId),
+      room.settings.targetScore,
+    );
     const matchId = await matchService.createMatch(room);
-    room.roster = room.players.map((p) => ({ userId: p.userId, username: p.username, isGuest: p.isGuest }));
+
+    room.roster = room.players.map((p) => ({
+      userId: p.userId,
+      username: p.username,
+      isGuest: p.isGuest,
+    }));
     room.game = game;
     room.matchId = matchId;
     room.events = [];
-    room.status = 'PLAYING';
+    room.status = "PLAYING";
     touch(room);
     armTurnTimer(room);
     broadcastState(room);
@@ -105,11 +164,11 @@ export function playerBank(room, userId) {
 }
 
 async function act(room, doAction) {
-  if (room.status !== 'PLAYING' || !room.game) {
-    throw new GameError('GAME_NOT_STARTED', 'The game has not started yet.');
+  if (room.status !== "PLAYING" || !room.game) {
+    throw new GameError("GAME_NOT_STARTED", "The game has not started yet.");
   }
   const turnNumber = room.game.turnNumber;
-  const events = doAction(room.game);
+  const events = doAction(room.game); // throws GameError if the action is not allowed
   recordEvents(room, turnNumber, events);
   await afterAction(room, events);
 }
@@ -129,7 +188,7 @@ async function finishGame(room, lastEvents) {
   clearTimeout(room.turnTimer);
   room.turnTimer = null;
   room.turnEndsAt = null;
-  room.status = 'FINISHED';
+  room.status = "FINISHED";
   room.finishedAt = Date.now();
   broadcastState(room);
   emitEvents(room, lastEvents);
@@ -156,7 +215,8 @@ async function finishGame(room, lastEvents) {
     });
     progression = outcome.progression;
   } catch (err) {
-    console.error('finishMatch failed:', err);
+    // The players still see who won, even if saving failed.
+    console.error("finishMatch failed:", err);
   }
 
   room.result = {
@@ -169,8 +229,10 @@ async function finishGame(room, lastEvents) {
     })),
     progression,
   };
-  io.to(room.code).emit('game:over', room.result);
+  io.to(room.code).emit("game:over", room.result);
 }
+
+// ---------- turn timer ----------
 
 function armTurnTimer(room) {
   clearTimeout(room.turnTimer);
@@ -179,43 +241,32 @@ function armTurnTimer(room) {
   room.timerSeq += 1;
   const token = room.timerSeq;
   room.turnTimer = setTimeout(() => {
-    enqueue(room, () => onTurnTimeout(room, token)).catch((err) => console.error(err));
+    enqueue(room, () => onTurnTimeout(room, token)).catch((err) =>
+      console.error(err),
+    );
   }, ms);
 }
 
 async function onTurnTimeout(room, token) {
-  if (room.status !== 'PLAYING' || room.timerSeq !== token) return;
+  // If anything re-armed the timer in the meantime, this timeout is out of date.
+  if (room.status !== "PLAYING" || room.timerSeq !== token) return;
   const playerId = currentPlayerId(room.game);
   const turnNumber = room.game.turnNumber;
-  const events = bank(room.game, playerId).map((e) => ({ ...e, type: 'TIMEOUT' }));
+  const events = bank(room.game, playerId).map((e) => ({
+    ...e,
+    type: "TIMEOUT",
+  }));
   recordEvents(room, turnNumber, events);
   await afterAction(room, events);
 }
 
-const GRACE_MS = 60 * 1000;
-export const REACTIONS = ['🐷', '😂', '🔥', '👏', '😮', '😭'];
-
-export async function leaveRoom(room, userId) {
-  const player = room.players.find((p) => p.userId === userId);
-  if (!player) return;
-  if (room.status === 'PLAYING') {
-    await forfeitPlayer(room, userId);
-    return;
-  }
-  clearTimeout(player.disconnectTimer);
-  room.players = room.players.filter((p) => p.userId !== userId);
-  if (room.players.length === 0) {
-    removeRoom(room.code);
-    return;
-  }
-  if (room.hostId === userId) room.hostId = room.players[0].userId;
-  touch(room);
-  broadcastState(room);
-}
+// ---------- disconnects, forfeits, abandoned games ----------
 
 export function handleDisconnect(room, userId, socketId) {
   const player = room.players.find((p) => p.userId === userId);
+  // Ignore an old connection of a player who has already reconnected on a new one.
   if (!player || player.socketId !== socketId) return;
+
   player.connected = false;
   player.socketId = null;
   clearTimeout(player.disconnectTimer);
@@ -231,16 +282,18 @@ function forfeitPlayer(room, userId) {
     if (room.status !== 'PLAYING') return;
     const player = room.players.find((p) => p.userId === userId);
     if (!player) return;
+
     clearTimeout(player.disconnectTimer);
     const wasCurrent = currentPlayerId(room.game) === userId;
     room.players = room.players.filter((p) => p.userId !== userId);
     if (room.hostId === userId && room.players.length > 0) room.hostId = room.players[0].userId;
     removePlayer(room.game, userId);
+
     if (room.game.order.length < 2) {
       await abandonGame(room);
       return;
     }
-    if (wasCurrent) armTurnTimer(room);
+    if (wasCurrent) armTurnTimer(room); // the next player gets a fresh clock
     touch(room);
     broadcastState(room);
   });
@@ -269,6 +322,7 @@ async function abandonGame(room) {
   broadcastState(room);
   io.to(room.code).emit('game:over', room.result);
 }
+// ---------- reactions (the social feature) ----------
 
 export function sendReaction(room, user, emoji) {
   if (!room.players.some((p) => p.userId === user.id)) {
@@ -280,19 +334,25 @@ export function sendReaction(room, user, emoji) {
   io.to(room.code).emit('room:reaction', { userId: user.id, username: user.username, emoji });
 }
 
+// ---------- housekeeping ----------
 export function cleanupRooms(now = Date.now()) {
   for (const room of allRooms()) {
     const idle = now - room.updatedAt;
-    const staleLobby = room.status === 'LOBBY' && idle > 30 * 60 * 1000;
-    const oldFinished = room.status === 'FINISHED' && now - (room.finishedAt ?? now) > 10 * 60 * 1000;
-    const ghostGame = room.status === 'PLAYING' && room.players.every((p) => !p.connected) && idle > 5 * 60 * 1000;
+    const staleLobby = room.status === "LOBBY" && idle > 30 * 60 * 1000;
+    const oldFinished =
+      room.status === "FINISHED" &&
+      now - (room.finishedAt ?? now) > 10 * 60 * 1000;
+    const ghostGame =
+      room.status === "PLAYING" &&
+      room.players.every((p) => !p.connected) &&
+      idle > 5 * 60 * 1000;
     if (staleLobby || oldFinished || ghostGame) removeRoom(room.code);
   }
 }
 
 export function startCleanup() {
   const timer = setInterval(cleanupRooms, 60 * 1000);
-  timer.unref();
+  timer.unref(); // do not keep the process alive just for this timer
   return timer;
 }
 
