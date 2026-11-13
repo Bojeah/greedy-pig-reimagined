@@ -1,3 +1,4 @@
+import usePageTitle from 'src/hooks/usePageTitle';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import PageShell from 'src/components/ui/PageShell';
@@ -8,6 +9,7 @@ import AchievementGrid from 'src/components/profile/AchievementGrid';
 import { apiFetch } from 'src/services/api';
 import { queryKeys } from 'src/services/queryKeys';
 export default function Profile() {
+    usePageTitle('Profile');
 const profile = useQuery({ queryKey: queryKeys.profile, queryFn: () =>
 apiFetch('/api/profile') });
 const stats = useQuery({ queryKey: queryKeys.stats, queryFn: () =>

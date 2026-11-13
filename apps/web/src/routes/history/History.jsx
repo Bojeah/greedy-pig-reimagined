@@ -1,3 +1,4 @@
+import usePageTitle from 'src/hooks/usePageTitle';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import PageShell from 'src/components/ui/PageShell';
 import StateMessage from 'src/components/ui/StateMessage';
@@ -5,9 +6,11 @@ import MatchCard from 'src/components/leaderboard/MatchCard';
 import { apiFetch } from 'src/services/api';
 import { queryKeys } from 'src/services/queryKeys';
 export default function History() {
+    usePageTitle('Match history');
 const query = useInfiniteQuery({
 queryKey: queryKeys.matches,
 queryFn: ({ pageParam }) =>
+    
 apiFetch(`/api/matches?limit=10${pageParam ?
 `&cursor=${encodeURIComponent(pageParam)}` : ''}`),
 initialPageParam: null,
@@ -15,7 +18,9 @@ getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 });
 const matches = query.data?.pages.flatMap((page) => page.matches) ?? [];
 return (
+    
 <PageShell title="Match history">
+    
 {query.isPending && <StateMessage kind="loading" text="Loading your
 matches..." />}
 {query.isError && ( 

@@ -1,3 +1,4 @@
+import usePageTitle from 'src/hooks/usePageTitle';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import PageShell from 'src/components/ui/PageShell';
@@ -7,6 +8,7 @@ import useAuth from 'src/hooks/useAuth';
 // The server still checks everything again, because the browser can never be
 //trusted.
 function validate(username, password, confirm) {
+    
 const name = username.trim().toLowerCase();
 if (!/^[a-z0-9_]{3,20}$/.test(name)) {
 return 'Username must be 3 to 20 characters: letters, numbers and underscores only.';
@@ -18,6 +20,7 @@ if (password !== confirm) return 'The two passwords do not match.';
 return '';
 }
 export default function Register() {
+    usePageTitle('Create account');
 const { user, register } = useAuth();
 const navigate = useNavigate();
 const location = useLocation();
