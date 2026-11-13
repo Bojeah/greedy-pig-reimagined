@@ -1,3 +1,4 @@
+import usePageTitle from 'src/hooks/usePageTitle';
 import { useQuery } from '@tanstack/react-query';
 import PageShell from 'src/components/ui/PageShell';
 import StateMessage from 'src/components/ui/StateMessage';
@@ -6,6 +7,7 @@ import useAuth from 'src/hooks/useAuth';
 import { apiFetch } from 'src/services/api';
 import { queryKeys } from 'src/services/queryKeys';
 export default function Leaderboard() {
+    usePageTitle('Leaderboard');
 const { user } = useAuth();
 const { data, isPending, isError, error, refetch } = useQuery({
 queryKey: queryKeys.leaderboard,
@@ -14,6 +16,7 @@ staleTime: 30 * 1000,
 });
 return (
 <PageShell title="Leaderboard">
+    
 {isPending && <StateMessage kind="loading" text="Loading the
 leaderboard..." />}
 {isError && (

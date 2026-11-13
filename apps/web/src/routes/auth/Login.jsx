@@ -1,3 +1,4 @@
+import usePageTitle from 'src/hooks/usePageTitle';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import PageShell from 'src/components/ui/PageShell';
@@ -5,6 +6,7 @@ import FormField from 'src/components/auth/FormField';
 import GuestButton from 'src/components/auth/GuestButton';
 import useAuth from 'src/hooks/useAuth';
 export default function Login() {
+usePageTitle('Log in');
 const { user, login } = useAuth();
 const navigate = useNavigate();
 const location = useLocation();
@@ -15,7 +17,9 @@ const [error, setError] = useState('');
 const [busy, setBusy] = useState(false);
 // Once logged in (or playing as a guest), go back to the page the player
 //wanted.
+
 useEffect(() => {
+   
 if (user) navigate(from, { replace: true });
 }, [user, from, navigate]);
 async function handleSubmit(event) {
